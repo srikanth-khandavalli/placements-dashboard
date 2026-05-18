@@ -193,7 +193,8 @@ if st.session_state.dashboard_loaded:
             llm, 
             ai_merged_data, 
             verbose=True, 
-            allow_dangerous_code=True 
+            allow_dangerous_code=True,
+            handle_parsing_errors=True 
         )
 
         # 3. Initialize Chat Memory

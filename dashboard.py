@@ -219,10 +219,13 @@ if st.session_state.dashboard_loaded:
             # --- INVISIBLE INSTRUCTIONS & DATA DICTIONARY ---
             secret_instructions = """
             \n\nINSTRUCTIONS FOR AI: 
-            1. CRITICAL: If the user asks for a list, table, roster, or subset of students, DO NOT write or save any CSV files. 
-            2. Instead, filter the dataframe and print out ONLY a clean, bulleted list of their 'Regd. Number' values directly in your text response.
-            3. Keep your response direct, professional, and free of unnecessary introductory text (e.g., jump straight to the list of numbers).
-            4. DATA DICTIONARY:
+            1. CRITICAL: If the user asks for a list, a table, a roster, or specific student rows, 
+            you MUST filter those rows, eliminate duplicates and write them to a file named exactly 'temp_export.csv' 
+            using the command `df.to_csv('temp_export.csv', index=False)`. 
+            
+            2. DO NOT just print out lists of registration numbers or text arrays in your final response text. 
+            Always use the CSV export action for subsets of rows. Please give regd. Number and relevent columns only in 'temp_export.csv'.
+            3. DATA DICTIONARY:
             - 'WISE Programme': A special empowerment program for female students.
             - 'C&DS': Stands for Career and Development Services.
             - 'Package': This represents the student's salary or CTC offer in LPA.

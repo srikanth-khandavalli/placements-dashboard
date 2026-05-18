@@ -219,14 +219,11 @@ if st.session_state.dashboard_loaded:
             # --- INVISIBLE INSTRUCTIONS & DATA DICTIONARY ---
             secret_instructions = """
             \n\nINSTRUCTIONS FOR AI: 
-            1. CRITICAL: If the user asks for a list, a table, a roster, or specific student rows, 
-            you MUST isolate those rows and write them to a file named exactly 'temp_export.csv' 
-            using the command `df.to_csv('temp_export.csv', index=False)`. 
+            1. If the user asks you to provide, give, or list a subset of the data, 
+            you MUST filter the dataframe and save the result to exactly 'temp_export.csv' using `df.to_csv('temp_export.csv', index=False)`. 
+            Then answer the user normally. When you give the csv result set, please don't give additional text, it is difficult to handle in streamlit cloud UI.
             
-            2. DO NOT just print out lists of registration numbers or text arrays in your final response text. 
-            Always use the CSV export action for subsets of rows.
-            
-            3. DATA DICTIONARY:
+            2. DATA DICTIONARY:
             - 'WISE Programme': A special empowerment program for female students.
             - 'C&DS': Stands for Career and Development Services.
             - 'Package': This represents the student's salary or CTC offer in LPA.

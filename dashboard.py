@@ -1,6 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import os
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 import matplotlib.pyplot as plt
 from functions import format_indian, custom_small_info
 
@@ -36,10 +39,20 @@ placement_url = st.text_input("Placement Data CSV URL:")
 student_url_default = "https://docs.google.com/spreadsheets/d/1ulWzuwver6sDcxyCys1ktVYLiNcF-3UjWmKgh0HMbT8/export?format=csv&gid=1143547355"
 placement_url_default = "https://docs.google.com/spreadsheets/d/1ulWzuwver6sDcxyCys1ktVYLiNcF-3UjWmKgh0HMbT8/export?format=csv&gid=1324552366"
 
-# --- SECTION 2: Data Loading & Processing ---
-# The code inside this block only runs AFTER the user clicks the button
+# # --- SECTION 2: Data Loading & Processing ---
+# # The code inside this block only runs AFTER the user clicks the button
+# if st.button("Load Dashboard"):
+
+# 1. The Dashboard Toggle (Using the URLs from your text inputs)
+if "dashboard_loaded" not in st.session_state:
+    st.session_state.dashboard_loaded = False
+
 if st.button("Load Dashboard"):
-    
+    st.session_state.dashboard_loaded = True
+
+# 2. EVERYTHING lives inside this check!
+if st.session_state.dashboard_loaded:
+
     # Check to make sure the user didn't leave the boxes blank
     if student_url and placement_url:
         try:
@@ -79,6 +92,7 @@ if st.button("Load Dashboard"):
         company_list_df = pd.DataFrame(placement_df['Company'].unique(), columns=['Company'])
         company_list_df = company_list_df.dropna()
         company_list_df = company_list_df.sort_values(by=["Company"],ascending=[True])
+        st.header("List of Placement Companies:")
         st.dataframe(company_list_df)
         # st.dataframe(uni_placement_df)
     except Exception as e:
@@ -139,6 +153,7 @@ if st.button("Load Dashboard"):
         final_table_df = pd.merge(final_table_df, branch_uni_placement_df, on='Branch', how='left')
         final_table_df = final_table_df[['Branch', 'Total Students', 'Total Placements', 'Students Placed']]
         # 3. Display the final clean table!
+        st.header("Branch wise Analytics:")
         st.dataframe(final_table_df)
     except Exception as e:
         st.error(f"Total Stundets Group by calculations error, details:{e}")   
@@ -152,6 +167,95 @@ if st.button("Load Dashboard"):
                                 ,'Which job do you prefer',"Parent's profile",'C&DS']]
     ai_placement_df = placement_df[['Regd. Number','Company','Package','Core/IT Sector','On/Off Campus']]
     ai_merged_data = pd.merge(ai_student_df, ai_placement_df, on='Regd. Number', how='left')
-    st.dataframe(ai_student_df.head(4))
-    st.dataframe(ai_placement_df.head(4))
-    st.dataframe(ai_merged_data.head(4))
+    # st.dataframe(ai_student_df.head(4))
+    # st.dataframe(ai_placement_df.head(4))
+    # st.dataframe(ai_merged_data.head(4))
+
+###################
+
+
+    st.divider()
+    st.header("🤖 AI Placement Assistant")
+
+    # Using \n\n for a clean line break in the info box as we discussed earlier!
+    st.info("Ask me anything about the placement data! \n\n *(e.g., 'What is the average package for CSE?' or 'Show me the unplaced girls with no backlogs')*")
+
+    try:
+        # 1. Initialize the AI Brain
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash", 
+            google_api_key=st.secrets["GEMINI_API_KEY"],
+            temperature=0 # Low temperature keeps it factual
+        )
+
+        # 2. Create the LangChain Agent using your secure, merged data
+        pandas_agent = create_pandas_dataframe_agent(
+            llm, 
+            ai_merged_data, 
+            verbose=True, 
+            allow_dangerous_code=True 
+        )
+
+        # 3. Initialize Chat Memory
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        # 4. Draw Previous Chat Bubbles and DataFrames
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+                if "df" in message:
+                    st.dataframe(message["df"])
+
+        # 5. The Chat Input Box
+        if prompt := st.chat_input("Ask a question about the placement data..."):
+            
+            # Show the user's question
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt})
+
+            # --- INVISIBLE INSTRUCTIONS & DATA DICTIONARY ---
+            secret_instructions = """
+            \n\nINSTRUCTIONS FOR AI: 
+            1. If the user asks you to provide, give, or list a subset of the data, 
+            you MUST filter the dataframe and save the result to exactly 'temp_export.csv' using `df.to_csv('temp_export.csv', index=False)`. 
+            Then answer the user normally.
+            
+            2. DATA DICTIONARY:
+            - 'WISE Programme': A special empowerment program for female students.
+            - 'C&DS': Stands for Career and Development Services.
+            - 'Package': This represents the student's salary or CTC offer in LPA.
+            - 'History of Backlogs': 0 means no backlogs, >0 means they have/had backlogs.
+            """
+            augmented_prompt = prompt + secret_instructions
+
+            # 6. Generate AI Response
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing placement data..."):
+                    try:
+                        # Run the agent with the hidden instructions
+                        response = pandas_agent.run(augmented_prompt)
+                        st.write(response)
+                        
+                        # Check if the AI generated a CSV file for us to display
+                        extracted_df = None
+                        if os.path.exists("temp_export.csv"):
+                            extracted_df = pd.read_csv("temp_export.csv")
+                            
+                            # Display the native dataframe (users can hover to download!)
+                            st.dataframe(extracted_df)
+                            os.remove("temp_export.csv") # Clean up
+
+                        # Save the response and the dataframe to memory
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": str(response),
+                            **({"df": extracted_df} if extracted_df is not None else {})
+                        })
+                    
+                    except Exception as e:
+                        st.error(f"Sorry, I ran into an error analyzing that: {e}")
+
+    except KeyError:
+        st.warning("⚠️ Please add your GEMINI_API_KEY to your .streamlit/secrets.toml file.")

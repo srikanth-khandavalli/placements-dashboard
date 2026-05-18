@@ -222,7 +222,7 @@ if st.session_state.dashboard_loaded:
             1. If the user asks you to provide, give, or list a subset of the data, 
             you MUST filter the dataframe and save the result to exactly 'temp_export.csv' using `df.to_csv('temp_export.csv', index=False)`. 
             Then answer the user normally. When you give the csv result set, please don't give additional text, it is difficult to handle in streamlit cloud UI.
-            
+            Please dont return the text similar to 'I have generated the list of students who are in the C&DS program but not placed and saved it to temp_export.csv.'
             2. DATA DICTIONARY:
             - 'WISE Programme': A special empowerment program for female students.
             - 'C&DS': Stands for Career and Development Services.

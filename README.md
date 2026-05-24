@@ -132,3 +132,7 @@ Pitfall: VS Code's terminal defaulted to the (base) environment upon every resta
 
 
 Solution: Used the VS Code Command Palette (Ctrl + Shift + P) -> Python: Select Interpreter, and manually pointed the workspace to the exact path of the dashboards conda environment executable.
+
+Deployed the dashboard on streamlit:
+https://placements-dashboard-svecw-srikanth1708.streamlit.app/
+
